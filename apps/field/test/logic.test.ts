@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
-import { ChartLog, extract, projectChart, testEnv } from "@pinpoint/core";
+import { ChartLog, extract, projectChart, testEnv, type Utterance } from "@pinpoint/core";
 import { createApp } from "../../../server/src/app";
 import { Store } from "../../../server/src/store";
-import { describeEntry, entryFromForm, minutesSince, pickDrug, splitForAcceptAll } from "../src/logic";
+import { describeEntry, entryFromForm, hhmmss, minutesSince, pickDrug, reviewItems, segmentClock, splitForAcceptAll } from "../src/logic";
 import { deletableCharts, uploadChart } from "../src/sync";
 
 describe("REQ-012 Accept all takes clear cards only", () => {
@@ -99,5 +99,40 @@ describe("REQ-030..033 sync then delete, against the real server", () => {
     const log = ChartLog.open({ deviceId: "dev-1", training: true, env: testEnv() });
     await expect(uploadChart(log, { serverUrl: base, deviceId: "dev-1", token: "wrong-token-123" })).rejects.toThrow(/401/);
     expect(deletableCharts([log], new Date(Date.now() + 48 * 3600_000))).toEqual([]);
+  });
+});
+
+describe("scribe review and transcript", () => {
+  const at = "2026-12-16T19:00:00.000Z";
+  const u = (text: string): Utterance => ({ text, startedAt: at, endedAt: at, engine: "typed" });
+
+  it("lists waiting cards, unmatched drugs and heard-but-not-charted lines, never care advice", () => {
+    const env = testEnv(at);
+    const log = ChartLog.open({ deviceId: "d", training: true, env });
+    const heard1 = log.recordUtterance(u("pulse 104"));
+    const heard2 = log.recordUtterance(u("uh hold on"));
+    const pulse = { ...extract("pulse 104", env.now(), env).proposals[0]!, utteranceId: heard1.id };
+    const drug = { ...extract("gave zorbitrol 4 milligrams", env.now(), env).proposals.find((p) => p.entry.type === "med")!, utteranceId: heard1.id };
+    const items = reviewItems(projectChart(log.events), [pulse, drug]);
+    const reasons = items.map((i) => i.reason);
+    expect(reasons).toContain("drug_unmatched");
+    expect(reasons).toContain("card_waiting");
+    expect(items.find((i) => i.reason === "heard_not_charted")?.eventId).toBe(heard2.id);
+    // A line with a card still waiting is not "not charted".
+    expect(items.filter((i) => i.reason === "heard_not_charted")).toHaveLength(1);
+  });
+
+  it("drops a line from heard-not-charted once an entry is confirmed from it", () => {
+    const env = testEnv(at);
+    const log = ChartLog.open({ deviceId: "d", training: true, env });
+    const h = log.recordUtterance(u("pulse 104"));
+    log.confirmProposal({ ...extract("pulse 104", env.now(), env).proposals[0]!, utteranceId: h.id });
+    expect(reviewItems(projectChart(log.events), [])).toEqual([]);
+  });
+
+  it("formats segment clock times from the utterance start", () => {
+    const start = new Date(2026, 11, 16, 14, 5, 0).toISOString();
+    expect(segmentClock(start, 9.4)).toBe("14:05:09");
+    expect(hhmmss(start)).toBe("14:05:00");
   });
 });

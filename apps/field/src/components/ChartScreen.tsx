@@ -1,3 +1,4 @@
+import "../views.css";
 import { useEffect, useState } from "react";
 import {
   SAY_IT_LIKE_THIS,
@@ -15,6 +16,17 @@ import { describeEntry, minutesSince } from "../logic";
 import { Cards } from "./Cards";
 import { FixSheet } from "./FixSheet";
 import { VoiceButton } from "./VoiceButton";
+import { TranscriptView } from "./TranscriptView";
+import { ScribeReview } from "./ScribeReview";
+import { FormPanel } from "./FormPanel";
+
+type Tab = "record" | "form" | "transcript" | "review";
+const TABS: { id: Tab; label: string }[] = [
+  { id: "record", label: "Record" },
+  { id: "form", label: "Form" },
+  { id: "transcript", label: "Transcript" },
+  { id: "review", label: "Review" },
+];
 
 type Sheet =
   | { mode: "add" }
@@ -33,6 +45,7 @@ export function ChartScreen(props: {
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("record");
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 15_000);
@@ -44,6 +57,15 @@ export function ChartScreen(props: {
   const sinceVitals = minutesSince(lastVitals, now);
   const tqOn = chart.tourniquets.filter((t) => t.onAt && !t.offAt);
   const flags = completenessFlags(chart);
+
+  const openCard = (id: string) => {
+    document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+  const correctById = (eventId: string) => {
+    const target = chart.entries.find((e) => e.eventId === eventId);
+    if (target) setSheet({ mode: "correct", target });
+  };
+  const toCheck = cards.length + chart.transcript.filter((t) => t.entryIds.length === 0 && !cards.some((c) => c.utteranceId === t.eventId)).length;
 
   const accept = async (accepted: Proposal[]) => {
     await commit((l) => accepted.map((p) => l.confirmProposal(p)));
@@ -108,55 +130,72 @@ export function ChartScreen(props: {
         </>
       )}
 
-      <section aria-label="Chart record">
-        <h2>Record</h2>
-        {chart.entries.length === 0 && <p className="muted">Nothing charted yet.</p>}
-        <ul className="record">
-          {[...chart.entries].reverse().map((s) => {
-            const d = describeEntry(s.value);
-            return (
-              <li key={s.eventId}>
-                <span className="rec-time">{hhmm(s.at)}</span>
-                <span className="rec-body">
-                  <span className="rec-label">{d.label}</span> {d.value}
-                  {s.quote && <span className="quote small"> “{s.quote}”</span>}
-                  <span className="muted small"> · {s.source === "voice" ? "voice, confirmed" : "tapped"}</span>
-                </span>
-                {!closed && (
-                  removing === s.eventId ? (
-                    <span className="row">
-                      <button type="button" className="btn danger" onClick={async () => { await commit((l) => l.voidEntry(s.eventId)); setRemoving(null); }}>Remove</button>
-                      <button type="button" className="btn ghost" onClick={() => setRemoving(null)}>Keep</button>
-                    </span>
-                  ) : (
-                    <span className="row">
-                      <button type="button" className="btn small-btn" onClick={() => setSheet({ mode: "correct", target: s })}>Correct</button>
-                      <button type="button" className="btn ghost small-btn" onClick={() => setRemoving(s.eventId)}>Remove</button>
-                    </span>
-                  )
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      <nav className="tabs" role="tablist" aria-label="Chart views">
+        {TABS.map((t) => (
+          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={`tab${tab === t.id ? " on" : ""}`} onClick={() => setTab(t.id)}>
+            {t.label}
+            {t.id === "transcript" && chart.transcript.length > 0 && <span className="tab-count">{chart.transcript.length}</span>}
+            {t.id === "review" && toCheck > 0 && <span className="tab-count attn">{toCheck}</span>}
+          </button>
+        ))}
+      </nav>
 
-      <section aria-label="Review">
-        <h2>Before you close</h2>
-        {flags.length === 0 ? <p className="muted">No gaps found by the three checks.</p> : flags.map((f) => <p key={f.code} className="warn">{f.message}</p>)}
-        {!closed &&
-          (confirmClose ? (
-            <div className="confirm">
-              <p>Close this chart? You can still view and hand it off, but not add to it.</p>
-              <div className="row">
-                <button type="button" className="btn danger" onClick={async () => { await commit((l) => l.close()); setConfirmClose(false); }}>Close chart</button>
-                <button type="button" className="btn ghost" onClick={() => setConfirmClose(false)}>Not yet</button>
+      {tab === "form" && <FormPanel chart={chart} cards={cards} />}
+      {tab === "transcript" && <TranscriptView chart={chart} cards={cards} onOpenCard={openCard} />}
+      {tab === "review" && <ScribeReview chart={chart} cards={cards} closed={closed} onOpenCard={openCard} onCorrect={correctById} />}
+      {tab === "record" && (
+        <>
+        <section aria-label="Chart record">
+          <h2>Record</h2>
+          {chart.entries.length === 0 && <p className="muted">Nothing charted yet.</p>}
+          <ul className="record">
+            {[...chart.entries].reverse().map((s) => {
+              const d = describeEntry(s.value);
+              return (
+                <li key={s.eventId}>
+                  <span className="rec-time">{hhmm(s.at)}</span>
+                  <span className="rec-body">
+                    <span className="rec-label">{d.label}</span> {d.value}
+                    {s.quote && <span className="quote small"> “{s.quote}”</span>}
+                    <span className="muted small"> · {s.source === "voice" ? "voice, confirmed" : "tapped"}</span>
+                  </span>
+                  {!closed && (
+                    removing === s.eventId ? (
+                      <span className="row">
+                        <button type="button" className="btn danger" onClick={async () => { await commit((l) => l.voidEntry(s.eventId)); setRemoving(null); }}>Remove</button>
+                        <button type="button" className="btn ghost" onClick={() => setRemoving(null)}>Keep</button>
+                      </span>
+                    ) : (
+                      <span className="row">
+                        <button type="button" className="btn small-btn" onClick={() => setSheet({ mode: "correct", target: s })}>Correct</button>
+                        <button type="button" className="btn ghost small-btn" onClick={() => setRemoving(s.eventId)}>Remove</button>
+                      </span>
+                    )
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section aria-label="Review">
+          <h2>Before you close</h2>
+          {flags.length === 0 ? <p className="muted">No gaps found by the three checks.</p> : flags.map((f) => <p key={f.code} className="warn">{f.message}</p>)}
+          {!closed &&
+            (confirmClose ? (
+              <div className="confirm">
+                <p>Close this chart? You can still view and hand it off, but not add to it.</p>
+                <div className="row">
+                  <button type="button" className="btn danger" onClick={async () => { await commit((l) => l.close()); setConfirmClose(false); }}>Close chart</button>
+                  <button type="button" className="btn ghost" onClick={() => setConfirmClose(false)}>Not yet</button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <button type="button" className="btn wide" onClick={() => setConfirmClose(true)}>Close chart</button>
-          ))}
-      </section>
+            ) : (
+              <button type="button" className="btn wide" onClick={() => setConfirmClose(true)}>Close chart</button>
+            ))}
+        </section>
+        </>
+      )}
 
       {sheet && (
         <FixSheet

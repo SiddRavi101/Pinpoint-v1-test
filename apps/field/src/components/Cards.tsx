@@ -29,7 +29,7 @@ export function Cards(props: {
       {cards.map((c) => {
         const d = describeEntry(c.entry);
         return (
-          <article key={c.id} className={`card${c.review.length ? " needs-look" : ""}`}>
+          <article key={c.id} id={`card-${c.id}`} className={`card${c.review.length ? " needs-look" : ""}`}>
             <div className="card-main">
               <span className="card-label">{d.label}</span>
               <span className="card-value">{d.value}</span>

@@ -1,5 +1,5 @@
 /** Pure UI logic, kept out of components so it can be unit tested. */
-import type { DoseUnit, Entry, EntryType, Limb, Proposal, Route, SurveyLetter } from "@pinpoint/core";
+import type { Chart, DoseUnit, Entry, EntryType, Limb, Proposal, Route, SurveyLetter } from "@pinpoint/core";
 import { hhmm } from "@pinpoint/core";
 
 export const ENTRY_LABELS: Record<EntryType, string> = {
@@ -151,4 +151,65 @@ export function entryFromForm(type: EntryType, f: FormValues, today: Date): Entr
 export function minutesSince(iso: string | undefined, now: Date): number | null {
   if (!iso) return null;
   return Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 60000));
+}
+
+// ---- Transcript and scribe review -----------------------------------------
+
+/** "14:05:09" in local time. */
+export function hhmmss(iso: string): string {
+  const d = new Date(iso);
+  return [d.getHours(), d.getMinutes(), d.getSeconds()].map((n) => String(n).padStart(2, "0")).join(":");
+}
+
+/** Clock time of a segment: utterance start plus the segment's offset. */
+export function segmentClock(startedAt: string, offsetSeconds: number): string {
+  return hhmmss(new Date(new Date(startedAt).getTime() + Math.max(0, offsetSeconds) * 1000).toISOString());
+}
+
+export type ReviewReason =
+  | "card_waiting"
+  | "card_needs_look"
+  | "drug_unmatched"
+  | "med_incomplete"
+  | "tourniquet_no_limb"
+  | "heard_not_charted";
+
+export interface ReviewItem {
+  reason: ReviewReason;
+  /** Plain-language line for the scribe. Points at documentation, never at care. */
+  message: string;
+  at: string;
+  eventId?: string;
+  cardId?: string;
+  quote?: string;
+}
+
+const REVIEW_ORDER: ReviewReason[] = ["card_needs_look", "drug_unmatched", "card_waiting", "med_incomplete", "tourniquet_no_limb", "heard_not_charted"];
+
+/**
+ * Everything a scribe should look at before handoff, oldest first within
+ * each reason. Documentation gaps only; it never comments on care.
+ */
+export function reviewItems(chart: Chart, cards: Proposal[]): ReviewItem[] {
+  const items: ReviewItem[] = [];
+  for (const c of cards) {
+    const d = describeEntry(c.entry);
+    if (c.entry.type === "med" && c.entry.drug === null) items.push({ reason: "drug_unmatched", message: `Drug name not matched: “${c.entry.spoken}”. Pick a name or fix it.`, at: c.at, cardId: c.id, quote: c.quote });
+    else if (c.review.length) items.push({ reason: "card_needs_look", message: `${d.label} ${d.value}: ${c.review.join("; ")}`, at: c.at, cardId: c.id, quote: c.quote });
+    else items.push({ reason: "card_waiting", message: `${d.label} ${d.value} is waiting for a tap`, at: c.at, cardId: c.id, quote: c.quote });
+  }
+  for (const m of chart.meds) {
+    const missing = [!m.value.drug && "name", !m.value.dose && "dose", !m.value.route && "route"].filter(Boolean);
+    if (missing.length) items.push({ reason: "med_incomplete", message: `${describeEntry(m.value).value}: no ${missing.join(", ")}`, at: m.at, eventId: m.eventId, quote: m.quote });
+  }
+  for (const t of chart.tourniquets) {
+    if (!t.limb) items.push({ reason: "tourniquet_no_limb", message: "Tourniquet without a limb", at: t.onAt ?? t.offAt ?? chart.openedAt, eventId: t.onEventId ?? t.offEventId });
+  }
+  const waitingFrom = new Set(cards.map((c) => c.utteranceId).filter(Boolean));
+  for (const line of chart.transcript) {
+    if (line.entryIds.length === 0 && !waitingFrom.has(line.eventId)) {
+      items.push({ reason: "heard_not_charted", message: "Heard, but nothing from it is in the chart", at: line.startedAt, eventId: line.eventId, quote: line.text });
+    }
+  }
+  return items.sort((a, b) => REVIEW_ORDER.indexOf(a.reason) - REVIEW_ORDER.indexOf(b.reason) || a.at.localeCompare(b.at));
 }
