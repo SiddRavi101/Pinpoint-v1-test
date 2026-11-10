@@ -1,0 +1,15 @@
+/* Handoff and receive screens. The QR always sits on pure white with a wide quiet zone. */
+.ho-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--surface); padding: 6px; border-radius: 12px; border: 1px solid var(--line); }
+.ho-tabs button { min-height: 52px; border: 0; border-radius: 9px; background: transparent; color: var(--fg); font: inherit; font-weight: 600; }
+.ho-tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); }
+.ho-qr { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; background: #fff; color: #111; padding: 16px; border-radius: 12px; }
+.ho-qr img { display: block; width: min(100%, 420px); aspect-ratio: 1; image-rendering: pixelated; background: #fff; }
+.ho-qr figcaption { color: #333; text-align: center; font-size: 0.95rem; }
+.ho-note { background: var(--warn-bg); color: var(--warn-fg); border-radius: 10px; padding: 10px 12px; font-size: 0.95rem; margin: 0; }
+.ho-steps { margin: 0; padding-left: 1.2em; font-size: 0.95rem; }
+.ho-controls { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.ho-counter { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.1rem; color: #111; }
+.rx-video { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; background: #000; border-radius: 12px; display: block; }
+.rx-progress { height: 14px; background: var(--line); border-radius: 7px; overflow: hidden; }
+.rx-progress > span { display: block; height: 100%; background: var(--ok); transition: width 0.15s; }
+.rx-text { white-space: pre-wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; font: 15px/1.4 ui-monospace, Menlo, monospace; margin: 0; }

@@ -12,3 +12,4 @@ export { tokenize, parseNumberWords } from "./rules/tokens.js";
 export { matchDrug, similarity } from "./rules/fuzzy.js";
 export { DRUGS, DRUG_LIST_VERSION } from "./rules/drugs.js";
 export { parseClock } from "./rules/clock.js";
+export * from "./transfer.js";
