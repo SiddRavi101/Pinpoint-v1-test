@@ -1,0 +1,57 @@
+/* Paper form (document view) and form scanner. */
+.paper-form {
+  --paper: #fffef9;
+  --ink: #0f1d3a;
+  --rule: #c9cbbf;
+  --ghost: #7a6a3a;
+  background: var(--paper); color: var(--ink); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 14px 14px 18px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); display: flex; flex-direction: column; gap: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  .paper-form { --paper: #1d2420; --ink: #e9efe9; --rule: #3a4640; --ghost: #d8c48a; }
+}
+.pf-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; border-bottom: 2px solid var(--ink); padding-bottom: 8px; }
+.pf-head strong { font-size: 1.05rem; letter-spacing: 0.02em; }
+.pf-badge { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em; background: var(--warn-bg); color: var(--warn-fg); padding: 2px 6px; border-radius: 4px; }
+.pf-sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.pf-section { border: 1.5px solid var(--ink); border-radius: 3px; padding: 8px 10px 10px; min-width: 0; }
+.pf-section h3 { margin: -8px -10px 8px; padding: 4px 10px; background: var(--ink); color: var(--paper); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.pf-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr)); gap: 8px 14px; }
+.pf-field { display: flex; flex-direction: column; min-width: 0; }
+.pf-field.wide, .pf-field:has(.pf-values > li:nth-child(2)) { grid-column: 1 / -1; }
+.pf-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.75; text-align: left; }
+.pf-label-btn { background: none; border: 0; color: inherit; padding: 0; font: inherit; font-size: 0.72rem; cursor: pointer; text-decoration: underline dotted; }
+.pf-line { margin: 0; min-height: 26px; border-bottom: 1px solid var(--rule); }
+.pf-empty { margin: 0; min-height: 26px; border-bottom: 1px dashed var(--rule); opacity: 0.6; font-style: italic; }
+.pf-field.unsupported .pf-label { opacity: 0.5; }
+.pf-values { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.pf-value { border-bottom: 1px solid var(--rule); }
+.pf-value-btn {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; width: 100%; min-height: 32px; padding: 3px 0;
+  background: none; border: 0; color: inherit; text-align: left; font: inherit; cursor: pointer;
+}
+.pf-text { font-family: "Bradley Hand", "Segoe Print", "Comic Neue", ui-rounded, system-ui, sans-serif; font-size: 1.02rem; font-weight: 600; overflow-wrap: anywhere; flex: 1 1 auto; }
+.pf-time { font-size: 0.72rem; opacity: 0.65; font-variant-numeric: tabular-nums; }
+.pf-value.pending .pf-text, td.pending, tr.pending th { color: var(--ghost); font-style: italic; font-weight: 500; opacity: 0.85; }
+.pf-value.pending { border-bottom-style: dashed; }
+.pf-tag { font-size: 0.66rem; font-style: normal; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ghost); border: 1px dashed var(--ghost); border-radius: 3px; padding: 0 4px; margin-left: 4px; }
+.pf-source { display: block; padding: 2px 0 6px; opacity: 0.8; }
+.pf-table-wrap { overflow-x: auto; }
+.pf-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.pf-table th, .pf-table td { border: 1px solid var(--rule); padding: 4px 6px; text-align: left; font-size: 0.92rem; white-space: nowrap; }
+.pf-table thead th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; }
+.pf-table td { font-family: "Bradley Hand", "Segoe Print", "Comic Neue", ui-rounded, system-ui, sans-serif; font-weight: 600; }
+.pf-unplaced { border-style: dashed; }
+
+/* Scanner */
+.scan-preview { max-width: 100%; max-height: 240px; object-fit: contain; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.scan-progress { width: 100%; height: 12px; }
+.scan-section { background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.scan-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.scan-row input, .scan-row select { min-height: 44px; flex: 1 1 140px; min-width: 0; font: inherit; padding: 0 10px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); }
+.scan-section > .scan-row:first-child input { font-weight: 700; }
+.scan-field { border-top: 1px solid var(--line); padding-top: 8px; }
+.icon-btn { min-height: 44px; min-width: 44px; padding: 0 10px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; cursor: pointer; }
+.icon-btn:disabled { opacity: 0.4; }
+.file-btn { position: relative; display: flex; align-items: center; justify-content: center; }
+.file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }

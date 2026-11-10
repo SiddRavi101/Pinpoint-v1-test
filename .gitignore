@@ -6,3 +6,7 @@ server/data/
 *.log
 .env
 .DS_Store
+
+# Whisper model files are fetched at build time (npm run fetch-model), not committed.
+apps/field/public/models/**
+!apps/field/public/models/.gitkeep

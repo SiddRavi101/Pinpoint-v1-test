@@ -14,6 +14,7 @@
     "typecheck": "tsc -p packages/core && tsc -p server && tsc -p apps/field --noEmit",
     "dev:field": "npm run dev -w apps/field",
     "build:field": "npm run build -w apps/field",
+    "fetch-model": "node scripts/fetch-whisper-model.mjs",
     "dev:server": "npm run dev -w server",
     "phrases": "TZ=UTC vitest run packages/core/test/phrases.test.ts"
   },

@@ -1,0 +1,16 @@
+/* Voice button states and the offline voice section of Setup. */
+.voice-btn:disabled { opacity: 0.7; }
+.voice-btn { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.transcribing { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.spinner { width: 1em; height: 1em; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--accent); animation: pp-spin 0.8s linear infinite; flex: none; }
+@keyframes pp-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+
+.voice-setup { background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.voice-setup h2 { margin: 0; font-size: 1rem; }
+.voice-setup p { margin: 0; }
+.voice-setup select { min-height: 44px; font: inherit; }
+.voice-status { font-weight: 600; }
+.voice-status.ok { color: var(--ok); }
+.progress { height: 10px; background: var(--line); border-radius: 6px; overflow: hidden; }
+.progress > span { display: block; height: 100%; background: var(--accent); transition: width 0.2s; }

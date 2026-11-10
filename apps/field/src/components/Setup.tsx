@@ -1,4 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  WHISPER_MODELS,
+  downloadVoiceModel,
+  resetVoice,
+  setVoiceModel,
+  voiceInfo,
+  type VoiceInfo,
+  type WhisperModel,
+} from "../platform/speech";
+import "../voice.css";
 
 export interface DeviceSettings {
   deviceId: string;
@@ -33,6 +43,95 @@ export function Setup(props: { initial: DeviceSettings; onSave: (s: DeviceSettin
           {props.onCancel && <button type="button" className="btn ghost" onClick={props.onCancel}>Cancel</button>}
         </div>
       </form>
+      <VoiceSetup />
     </div>
+  );
+}
+
+const ENGINE_LABEL: Record<VoiceInfo["kind"], string> = {
+  whisper: "Offline voice model (Whisper) on this device",
+  phone: "The phone's own on-device speech engine",
+  typed: "No voice: typed input",
+};
+
+/** Which speech engine is in use, and the one-time model download. */
+function VoiceSetup() {
+  const [info, setInfo] = useState<VoiceInfo | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [msg, setMsg] = useState("");
+
+  const refresh = () => {
+    setInfo(null);
+    voiceInfo().then(setInfo, (e) => setMsg((e as Error).message));
+  };
+  useEffect(refresh, []);
+
+  if (!info) return <section className="voice-setup" aria-label="Voice"><h2>Voice</h2><p className="muted">Checking voice…</p></section>;
+
+  const download = async (model: WhisperModel) => {
+    setBusy(true);
+    setMsg("");
+    setProgress(0);
+    try {
+      await downloadVoiceModel(model, (p) => setProgress(p.fraction));
+      setMsg("Voice model saved on this device. Voice now works offline.");
+      refresh();
+    } catch (e) {
+      setMsg(`Download failed: ${(e as Error).message}. Check the connection and try again.`);
+      resetVoice();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="voice-setup" aria-label="Voice">
+      <h2>Voice</h2>
+      <p className={`voice-status${info.kind === "whisper" ? " ok" : ""}`}>{ENGINE_LABEL[info.kind]}</p>
+      {info.kind === "whisper" && (
+        <p className="muted small">
+          {info.model.label}. {info.modelLocation === "bundled" ? "Included with this app build." : "Downloaded to this device."} Speech is turned
+          into text on this phone. Audio is never saved or sent.
+        </p>
+      )}
+      {info.note && info.kind !== "whisper" && <p className="muted small">{info.note}</p>}
+
+      <label className="field" htmlFor="set-voice-model">
+        <span>Voice model</span>
+        <select
+          id="set-voice-model"
+          value={info.model.id}
+          disabled={busy}
+          onChange={async (e) => {
+            await setVoiceModel(e.target.value as WhisperModel["id"]);
+            refresh();
+          }}
+        >
+          {WHISPER_MODELS.map((m) => (
+            <option key={m.id} value={m.id}>{m.label} · about {m.approxMb} MB</option>
+          ))}
+        </select>
+      </label>
+
+      {info.modelLocation === "missing" && info.micSupported && (
+        <>
+          <p className="small">
+            Download the voice model once (about {info.model.approxMb} MB) while you have signal. Only the model is downloaded. After that, voice
+            works with no signal, and audio never leaves this phone.
+          </p>
+          <button type="button" className="btn primary wide" disabled={busy} onClick={() => void download(info.model)}>
+            {busy ? "Downloading…" : "Download offline voice model"}
+          </button>
+          {busy && (
+            <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+              <span style={{ width: `${Math.round(progress * 100)}%` }} />
+            </div>
+          )}
+        </>
+      )}
+      {msg && <p className="muted small" role="status">{msg}</p>}
+      <p className="muted small">In development. Tested on mock patients only. Every voice entry still needs a tap to confirm.</p>
+    </section>
   );
 }

@@ -7,6 +7,7 @@ export * from "./retention.js";
 export * from "./completeness.js";
 export * from "./template.js";
 export * from "./validate.js";
+export * from "./form.js";
 export { extract, RULES_VERSION, type ExtractResult } from "./rules/extract.js";
 export { tokenize, parseNumberWords } from "./rules/tokens.js";
 export { matchDrug, similarity } from "./rules/fuzzy.js";
