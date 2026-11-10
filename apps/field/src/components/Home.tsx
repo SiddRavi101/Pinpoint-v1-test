@@ -8,6 +8,7 @@ export function Home(props: {
   onNew: () => void;
   onSync: () => Promise<string>;
   onSettings: () => void;
+  onReceive: () => void;
 }) {
   const [syncMsg, setSyncMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,6 +31,7 @@ export function Home(props: {
       ) : (
         <button type="button" className="btn primary big wide" onClick={props.onNew}>New {PILOT ? "training " : ""}chart</button>
       )}
+      <button type="button" className="btn wide" onClick={props.onReceive}>Receive a handoff (scan QR)</button>
       <section aria-label="Charts on this phone">
         <h2>On this phone</h2>
         {charts.length === 0 && <p className="muted">No charts. Charts delete themselves 12 hours after the server confirms them.</p>}

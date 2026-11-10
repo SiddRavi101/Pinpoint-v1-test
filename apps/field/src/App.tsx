@@ -7,8 +7,17 @@ import { Home } from "./components/Home";
 import { Setup, type DeviceSettings } from "./components/Setup";
 import { ChartScreen } from "./components/ChartScreen";
 import { HandoffScreen } from "./components/HandoffScreen";
+import { ReceiveScreen } from "./components/ReceiveScreen";
+import { ReceivedChart } from "./components/ReceivedChart";
+import { ChartLog } from "@pinpoint/core";
 
-type View = { name: "home" } | { name: "settings" } | { name: "chart"; id: string } | { name: "handoff"; id: string };
+type View =
+  | { name: "home" }
+  | { name: "settings" }
+  | { name: "chart"; id: string }
+  | { name: "handoff"; id: string }
+  | { name: "receive" }
+  | { name: "received" };
 
 export function App() {
   const [locked, setLocked] = useState(true);
@@ -72,12 +81,27 @@ export function App() {
 
 function Main({ settings, view, setView }: { settings: DeviceSettings; view: View; setView: (v: View) => void }) {
   const charts = useCharts(settings.deviceId);
+  // A chart received by QR: memory only, never written to the store (see ReceivedChart).
+  const [received, setReceived] = useState<ChartLog | null>(null);
   if (!charts.ready) return <div className="screen"><p className="muted">Loading charts…</p></div>;
   const log = view.name === "chart" || view.name === "handoff" ? charts.logs.find((l) => l.chartId === view.id) : undefined;
-  const training = log ? log.events[0]?.kind === "chart_opened" && log.events[0].payload.training : PILOT;
+  const shown = view.name === "received" ? received ?? undefined : log;
+  const training = shown ? shown.events[0]?.kind === "chart_opened" && shown.events[0].payload.training : PILOT;
 
   let body;
-  if (view.name === "chart" && log) {
+  if (view.name === "receive") {
+    body = (
+      <ReceiveScreen
+        onBack={() => setView({ name: "home" })}
+        onReceived={(events) => {
+          setReceived(ChartLog.fromEvents(events));
+          setView({ name: "received" });
+        }}
+      />
+    );
+  } else if (view.name === "received" && received) {
+    body = <ReceivedChart log={received} onBack={() => setView({ name: "home" })} />;
+  } else if (view.name === "chart" && log) {
     body = <ChartScreen log={log} commit={(fn) => charts.commit(log.chartId, fn as never)} onHandoff={() => setView({ name: "handoff", id: log.chartId })} onBack={() => setView({ name: "home" })} />;
   } else if (view.name === "handoff" && log) {
     body = <HandoffScreen log={log} onBack={() => setView({ name: "chart", id: log.chartId })} />;
@@ -91,6 +115,7 @@ function Main({ settings, view, setView }: { settings: DeviceSettings; view: Vie
           setView({ name: "chart", id: l.chartId });
         }}
         onSettings={() => setView({ name: "settings" })}
+        onReceive={() => setView({ name: "receive" })}
         onSync={async () => {
           const r = await charts.syncAll(settings);
           if (r.errors.length) return `Could not sync: ${r.errors[0]}`;

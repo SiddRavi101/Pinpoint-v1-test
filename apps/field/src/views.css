@@ -30,3 +30,5 @@
 .review-table td { padding: 8px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .review-table td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 @media (max-width: 420px) { .review-table th:nth-child(4), .review-table td:nth-child(4) { display: none; } }
+.tabs.three { grid-template-columns: repeat(3, 1fr); position: static; }
+.received-head { padding-bottom: 0; }
