@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { formsAssets } from "./vite.forms-assets";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -53,7 +54,7 @@ function dropBundledOrtWasm(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), localOrt(), dropBundledOrtWasm()],
+  plugins: [react(), localOrt(), dropBundledOrtWasm(), formsAssets()],
   // Relative asset paths so the bundle works inside the native wrapper.
   base: "./",
   build: {

@@ -10,6 +10,8 @@ import {
   type FilledValue,
   type FormLayout,
   type Proposal,
+  type VitalType,
+  type VitalsTableRow,
 } from "@pinpoint/core";
 import "../forms.css";
 
@@ -49,39 +51,46 @@ export function FormView({ chart, pending, layout, onFieldTap }: { chart: Chart;
     );
   };
 
-  const field = (f: FilledField) => {
+  const table = (key: string, timeLabel: string, columns: { key: VitalType; label: string }[], rows: VitalsTableRow[]) => (
+    <div className="pf-table-wrap" key={key}>
+      <table className="pf-table">
+        <thead>
+          <tr>
+            <th scope="col">{timeLabel}</th>
+            {columns.map((c) => <th key={c.key} scope="col">{c.label}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 && (
+            <tr>
+              <th scope="row">&nbsp;</th>
+              {columns.map((c) => <td key={c.key} />)}
+            </tr>
+          )}
+          {rows.map((r, i) => (
+            <tr key={`${r.at}-${i}`} className={r.pending ? "pending" : undefined}>
+              <th scope="row">{hhmm(r.at)}</th>
+              {columns.map((c) => {
+                const cell = r.cells[c.key];
+                return (
+                  <td key={c.key} className={cell?.pending ? "pending" : undefined} title={cell?.quote ? `“${cell.quote}”` : undefined}>
+                    {cell?.text ?? ""}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rows.some((r) => r.pending) && <p className="pf-caption small">Italic rows are cards waiting for a tap, not yet in the record.</p>}
+    </div>
+  );
+
+  const field = (f: FilledField, sectionLabel: string) => {
     const body = f.unsupported ? (
       <p className="pf-empty small">Pinpoint doesn't capture this field yet</p>
     ) : f.table ? (
-      f.table.length === 0 ? (
-        <p className="pf-line" aria-label="empty" />
-      ) : (
-        <div className="pf-table-wrap">
-          <table className="pf-table">
-            <thead>
-              <tr>
-                <th scope="col">Time</th>
-                {VITAL_COLUMNS.map((c) => <th key={c.key} scope="col">{c.label}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {f.table.map((r, i) => (
-                <tr key={`${r.at}-${i}`} className={r.pending ? "pending" : undefined}>
-                  <th scope="row">{hhmm(r.at)}{r.pending && <span className="pf-tag">waiting</span>}</th>
-                  {VITAL_COLUMNS.map((c) => {
-                    const cell = r.cells[c.key];
-                    return (
-                      <td key={c.key} className={cell?.pending ? "pending" : undefined} title={cell?.quote ? `“${cell.quote}”` : undefined}>
-                        {cell?.text ?? ""}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
+      table(f.id, "Time", VITAL_COLUMNS, f.table)
     ) : f.values.length === 0 ? (
       <p className="pf-line" aria-label="empty" />
     ) : (
@@ -91,7 +100,7 @@ export function FormView({ chart, pending, layout, onFieldTap }: { chart: Chart;
       <div key={f.id} className={`pf-field${f.unsupported ? " unsupported" : ""}${f.table ? " wide" : ""}`}>
         {onFieldTap ? (
           <button type="button" className="pf-label pf-label-btn" onClick={() => onFieldTap(f.id)}>{f.label}</button>
-        ) : (
+        ) : f.label.trim().toLowerCase() === sectionLabel.trim().toLowerCase() ? null : (
           <span className="pf-label">{f.label}</span>
         )}
         {body}
@@ -112,7 +121,8 @@ export function FormView({ chart, pending, layout, onFieldTap }: { chart: Chart;
         {filled.sections.map((s) => (
           <section key={s.id} className="pf-section" aria-label={s.label}>
             <h3>{s.label}</h3>
-            <div className="pf-fields">{s.fields.map(field)}</div>
+            {s.vitalsGrid && table(`${s.id}-grid`, s.vitalsGrid.timeLabel, s.vitalsGrid.columns.map((c) => ({ key: c.type, label: c.label })), s.vitalsGrid.rows)}
+            {s.fields.length > 0 && <div className="pf-fields">{s.fields.map((f) => field(f, s.label))}</div>}
           </section>
         ))}
       </div>

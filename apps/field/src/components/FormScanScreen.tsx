@@ -130,7 +130,7 @@ function ReviewLayout({ layout, setLayout, onSave, onCancel }: { layout: FormLay
         <button type="button" className="btn ghost" onClick={onCancel}>Cancel</button>
         <div className="bar-title"><strong>Check the form</strong><span className="muted small">{bound} of {total} fields linked to chart data</span></div>
       </header>
-      <p className="warn small">Check every label against the paper. Fields marked “Not captured by Pinpoint” stay blank. This form is {PENDING_MEDICAL_REVIEW} until your medical lead signs it off.</p>
+      <p className="warn small">Check every label against the paper. Fields marked “Not captured” stay blank on the form. This form is {PENDING_MEDICAL_REVIEW} until your medical lead signs it off.</p>
       <label className="field">
         <span>Form name</span>
         <input value={layout.name} onChange={(e) => setLayout({ ...layout, name: e.target.value })} placeholder="As printed on the paper" />

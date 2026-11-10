@@ -89,7 +89,7 @@ export interface BindingOption {
 
 /** Names of the kinds of chart data, as the app already labels them. */
 export const BINDING_OPTIONS: BindingOption[] = [
-  { key: "none", label: "Not captured by Pinpoint", bind: null },
+  { key: "none", label: "Not captured", bind: null },
   { key: "patient", label: "Patient (all details)", bind: { kind: "patient" } },
   { key: "patient.name", label: "Patient name", bind: { kind: "patient", field: "name" } },
   { key: "patient.age", label: "Patient age", bind: { kind: "patient", field: "age" } },
@@ -441,7 +441,18 @@ export interface FilledField {
 export interface FilledSection {
   id: string;
   label: string;
+  /** Fields drawn one by one (excludes fields shown in the grid). */
   fields: FilledField[];
+  /**
+   * When the paper prints vital signs as a grid (two or more vital fields in
+   * one section), they are drawn as one table with the paper's own column
+   * labels, in the paper's order. An unbound "Time" field there is the row time.
+   */
+  vitalsGrid?: {
+    timeLabel: string;
+    columns: { fieldId: string; label: string; type: VitalType }[];
+    rows: VitalsTableRow[];
+  };
 }
 
 export interface FilledForm {
@@ -566,10 +577,34 @@ export function fillForm(layout: FormLayout, chart: Chart, pending: Proposal[] =
   const counts = { confirmed: 0, pending: 0, empty: 0, unsupported: 0 };
   const placed = new Set<string>();
 
-  const sections: FilledSection[] = layout.sections.map((sec) => ({
+  const sections: FilledSection[] = layout.sections.map((sec) => {
+    const vitalFields = sec.fields.filter((f): f is FormField & { bind: { kind: "vital"; type: VitalType } } => f.bind?.kind === "vital");
+    let grid: FilledSection["vitalsGrid"];
+    let rest = sec.fields;
+    if (vitalFields.length >= 2) {
+      const timeField = sec.fields.find((f) => !f.bind && /^\s*time\s*$/i.test(f.label));
+      const columns = vitalFields.map((f) => ({ fieldId: f.id, label: f.label, type: f.bind.type }));
+      const types = new Set(columns.map((c) => c.type));
+      const rows = vitalsTable(chart.vitals, pending.filter((p) => types.has(p.entry.type as VitalType)))
+        .map((r) => ({ ...r, cells: Object.fromEntries(Object.entries(r.cells).filter(([k]) => types.has(k as VitalType))) as VitalsTableRow["cells"] }))
+        .filter((r) => Object.keys(r.cells).length > 0);
+      for (const r of rows) for (const c of Object.values(r.cells)) {
+        if (!c) continue;
+        if (c.pending) counts.pending++;
+        else {
+          counts.confirmed++;
+          placed.add(c.eventId!);
+        }
+      }
+      if (!rows.length) counts.empty++;
+      grid = { timeLabel: timeField?.label ?? "Time", columns, rows };
+      rest = sec.fields.filter((f) => f.bind?.kind !== "vital" && f !== timeField);
+    }
+    return {
     id: sec.id,
     label: sec.label,
-    fields: sec.fields.map((f): FilledField => {
+    ...(grid ? { vitalsGrid: grid } : {}),
+    fields: rest.map((f): FilledField => {
       if (!f.bind) {
         counts.unsupported++;
         return { id: f.id, label: f.label, bind: null, values: [], unsupported: true };
@@ -613,7 +648,8 @@ export function fillForm(layout: FormLayout, chart: Chart, pending: Proposal[] =
       if (!values.length) counts.empty++;
       return { id: f.id, label: f.label, bind, values, unsupported: false };
     }),
-  }));
+  };
+  });
 
   return {
     layoutId: layout.id,

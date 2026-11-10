@@ -297,11 +297,24 @@ describe("layoutFromOcrLines (SAR patient form sample)", () => {
     expect(layoutFromOcrLines(sarFormOcr(), "x").id).toBe(layoutFromOcrLines(sarFormOcr(), "x").id);
   });
 
+  it("draws a printed vitals grid as one table with the paper's columns", () => {
+    const { log, env } = sample();
+    env.set("2026-12-16T19:20:00.000Z");
+    const waiting = extract("pulse 96 BP 124 over 80", env.now(), env).proposals;
+    const vs = fillForm(layout, projectChart(log.events), waiting).sections.find((s) => s.label === "VITAL SIGNS")!;
+    expect(vs.fields).toEqual([]); // Time became the row time; vitals went into the grid
+    expect(vs.vitalsGrid!.timeLabel).toBe("Time");
+    expect(vs.vitalsGrid!.columns.map((c) => c.label)).toEqual(["Pulse", "Resp", "B/P", "SpO2", "GCS"]);
+    expect(vs.vitalsGrid!.rows.map((r) => [r.pending, r.cells.pulse?.text, r.cells.bp?.text])).toEqual([[false, "104", "128/82"], [true, "96", "124/80"]]);
+  });
+
   it("fills from a real chart", () => {
     const { log } = sample();
     const filled = fillForm(layout, projectChart(log.events));
+    expect(filled.unplacedEntryIds).toEqual([]);
     const f = (label: string) => filled.sections.flatMap((s) => s.fields).find((x) => x.label === label)!;
-    expect(f("Pulse").values.map((v) => v.text)).toEqual(["104 /min"]);
+    const single: FormLayout = { ...layout, sections: [{ id: "v", label: "V", fields: [{ id: "p", label: "Pulse", bind: { kind: "vital", type: "pulse" } }] }] };
+    expect(fillForm(single, projectChart(log.events)).sections[0]!.fields[0]!.values.map((v) => v.text)).toEqual(["104 /min"]);
     expect(f("Age").values.map((v) => v.text)).toEqual(["34"]);
     expect(f("Weight").unsupported).toBe(true);
     expect(f("Airway").values.map((v) => v.text)).toEqual(["clear, talking"]);

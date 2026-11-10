@@ -9,6 +9,7 @@ import { ChartScreen } from "./components/ChartScreen";
 import { HandoffScreen } from "./components/HandoffScreen";
 import { ReceiveScreen } from "./components/ReceiveScreen";
 import { ReceivedChart } from "./components/ReceivedChart";
+import { FormsScreen } from "./components/FormsScreen";
 import { ChartLog } from "@pinpoint/core";
 
 type View =
@@ -17,7 +18,8 @@ type View =
   | { name: "chart"; id: string }
   | { name: "handoff"; id: string }
   | { name: "receive" }
-  | { name: "received" };
+  | { name: "received" }
+  | { name: "forms" };
 
 export function App() {
   const [locked, setLocked] = useState(true);
@@ -89,7 +91,9 @@ function Main({ settings, view, setView }: { settings: DeviceSettings; view: Vie
   const training = shown ? shown.events[0]?.kind === "chart_opened" && shown.events[0].payload.training : PILOT;
 
   let body;
-  if (view.name === "receive") {
+  if (view.name === "forms") {
+    body = <FormsScreen onBack={() => setView({ name: "home" })} />;
+  } else if (view.name === "receive") {
     body = (
       <ReceiveScreen
         onBack={() => setView({ name: "home" })}
@@ -116,6 +120,7 @@ function Main({ settings, view, setView }: { settings: DeviceSettings; view: Vie
         }}
         onSettings={() => setView({ name: "settings" })}
         onReceive={() => setView({ name: "receive" })}
+        onForms={() => setView({ name: "forms" })}
         onSync={async () => {
           const r = await charts.syncAll(settings);
           if (r.errors.length) return `Could not sync: ${r.errors[0]}`;

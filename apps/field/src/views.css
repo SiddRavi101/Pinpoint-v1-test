@@ -32,3 +32,5 @@
 @media (max-width: 420px) { .review-table th:nth-child(4), .review-table td:nth-child(4) { display: none; } }
 .tabs.three { grid-template-columns: repeat(3, 1fr); position: static; }
 .received-head { padding-bottom: 0; }
+.form-row { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.chart-row[aria-pressed="true"] { border-color: var(--accent); }
