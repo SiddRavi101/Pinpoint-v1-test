@@ -1,6 +1,6 @@
 {
   "set": "sccssar-style-v0.1",
-  "note": "100 SCCSSAR-style test phrases for the voice rules (Week 0 checklist). Written by engineering as speech inputs; expected values are what was said, not clinical judgments. Grow this set with real Dec 16 phrases.",
+  "note": "W-series phrases are verbatim on-device Whisper output for clearly spoken charting phrases (synthetic voice, 2026-11-10). 100 SCCSSAR-style test phrases for the voice rules (Week 0 checklist). Written by engineering as speech inputs; expected values are what was said, not clinical judgments. Grow this set with real Dec 16 phrases.",
   "phrases": [
     { "id": "V001", "text": "pulse 112", "e": [{ "type": "pulse", "bpm": 112 }], "clear": true, "noNote": true },
     { "id": "V002", "text": "Pulse 112, BP 130 over 85", "e": [{ "type": "pulse", "bpm": 112 }, { "type": "bp", "systolic": 130, "diastolic": 85 }], "clear": true, "noNote": true },
@@ -113,6 +113,11 @@
     { "id": "N003", "text": "skin pale cool and diaphoretic", "e": [{ "type": "note" }], "note": "pale" },
     { "id": "N004", "text": "found him unresponsive near the creek", "e": [{ "type": "note" }], "note": "unresponsive" },
     { "id": "N005", "text": "um okay", "e": [], "noNote": true },
-    { "id": "N006", "text": "splinted right ankle with a SAM splint, pulse 90", "e": [{ "type": "pulse", "bpm": 90 }, { "type": "note" }], "note": "SAM splint" }
+    { "id": "N006", "text": "splinted right ankle with a SAM splint, pulse 90", "e": [{ "type": "pulse", "bpm": 90 }, { "type": "note" }], "note": "SAM splint" },
+    { "id": "W001", "text": "RASPS 20, sets 94", "e": [{ "type": "resp", "rate": 20 }, { "type": "spo2", "percent": 94 }], "review": ["resp", "spo2"], "noNote": true },
+    { "id": "W002", "text": "Ternicott left leg on.", "e": [{ "type": "tourniquet", "action": "on", "limb": "left leg" }], "review": ["tourniquet"], "noNote": true },
+    { "id": "W003", "text": "34-year-old female, Pulse 104, sets 95, gave ibuprofen 400mg by mouth.", "e": [{ "type": "patient", "age": 34, "sex": "female" }, { "type": "pulse", "bpm": 104 }, { "type": "spo2", "percent": 95 }, { "type": "med", "drug": "ibuprofen", "dose": { "amount": 400, "unit": "mg" }, "route": "PO" }], "review": ["spo2"], "noNote": true },
+    { "id": "W004", "text": "took two sets of vitals", "e": [{ "type": "note" }], "note": "sets of vitals" },
+    { "id": "W005", "text": "gave on donsetron 4 mg by mouth.", "e": [{ "type": "med", "drug": "ondansetron", "dose": { "amount": 4, "unit": "mg" }, "route": "PO" }] }
   ]
 }

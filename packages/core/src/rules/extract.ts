@@ -14,20 +14,27 @@ import { originalQuote, tokenize, tokensInRange, type Tokenized } from "./tokens
 import { matchDrug } from "./fuzzy.js";
 import { findAtClock, parseClock } from "./clock.js";
 
-export const RULES_VERSION = "rules-0.1.0";
+export const RULES_VERSION = "rules-0.2.0";
 
 type AnchorType =
   | "spo2" | "pulse" | "bp" | "resp" | "gcs" | "med" | "tourniquet" | "nka" | "allergy"
   | "report" | "mechanism" | "found" | "demographics" | "name";
 
+/**
+ * Words on-device speech engines were seen to write for charting terms
+ * ("sets 94" for "sats 94"). They still anchor a card, but the card always
+ * carries a check, so "Accept all" leaves it for a deliberate tap.
+ */
+const MISHEARD = /\b(?:sets|rasps?|ternicott?|tournicott?)\b/;
+
 const ANCHORS: { type: AnchorType; re: RegExp }[] = [
-  { type: "spo2", re: /\b(?:spo2|sp o2|o2 sats?|o2 saturation|oxygen sat(?:uration)?s?|sats?|saturation|pulse ox(?:imetry)?|pulse ox)\b/g },
+  { type: "spo2", re: /\b(?:spo2|sp o2|o2 sats?|o2 saturation|oxygen sat(?:uration)?s?|sats?|saturation|pulse ox(?:imetry)?|pulse ox|sets(?=\s+\d))\b/g },
   { type: "pulse", re: /\b(?:pulse|heart rate|hr)\b/g },
   { type: "bp", re: /\b(?:bp|blood pressure|b p)\b/g },
-  { type: "resp", re: /\b(?:resps?|respirations?|respiratory rate|resp rate|rr|breathing rate|breathing)\b/g },
+  { type: "resp", re: /\b(?:resps?|rasps?|respirations?|respiratory rate|resp rate|rr|breathing rate|breathing)\b/g },
   { type: "gcs", re: /\b(?:gcs|glasgow(?: coma scale)?)\b/g },
   { type: "med", re: /\b(?:gave|given|administered|administer|pushed|dosed)\b/g },
-  { type: "tourniquet", re: /\b(?:(?:applied|placed|put on|removed|released|took off)\s+(?:a\s+|the\s+)?)?(?:tourniquet|tq)\b/g },
+  { type: "tourniquet", re: /\b(?:(?:applied|placed|put on|removed|released|took off)\s+(?:a\s+|the\s+)?)?(?:tourniquet|tq|ternicott?|tournicott?)\b/g },
   { type: "nka", re: /\b(?:nkda|nka|no known (?:drug )?allergies|no allergies|denies (?:any )?allergies)\b/g },
   { type: "allergy", re: /\b(?:allergic to|allergy to|allergies to|allergies(?: are| is| include)?|allergy)\b/g },
   { type: "report", re: /\b(?:(?:the\s+)?(?:patient|pt|subject|he|she|they)\s+)?(?:reports|reported|states|stated|says|said|complains of|complaining of|c\/o|denies|denied)\b/g },
@@ -305,7 +312,7 @@ function parseTourniquet(span: string, ref: Date): SpanResult {
     at = clock.date;
     ends.push(clock.end);
   }
-  const anchorEnd = /\b(?:tourniquet|tq)\b/.exec(span);
+  const anchorEnd = /\b(?:tourniquet|tq|ternicott?|tournicott?)\b/.exec(span);
   if (anchorEnd) ends.push(anchorEnd.index + anchorEnd[0].length);
   return {
     parsed: [{ entry: { type: "tourniquet", action, ...(limb.limb ? { limb: limb.limb } : {}) }, review, at }],
@@ -427,7 +434,9 @@ export function extract(utterance: string, spokenAt: Date, env: Env = defaultEnv
     const end = a.start + r.consumed;
     consumedRanges.push([a.start, end]);
     const quote = originalQuote(tz, a.start, end);
+    const misheard = MISHEARD.exec(anchorText)?.[0];
     for (const p of r.parsed) {
+      if (misheard) p.review = [`Heard as “${misheard}”. Check this is what was said`, ...p.review];
       proposals.push({
         id: env.newId(),
         entry: p.entry,

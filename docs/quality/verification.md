@@ -6,6 +6,7 @@
 |---|---|---|---|
 | 2026-11-10 | initial | core: phrases (108, set `sccssar-style-v0.1`), core (21), server (7), field logic + sync against real server (7) | 143 / 143 pass; typecheck clean; `vite build` OK |
 
+| 2026-11-10 | rules-0.2.0 | + phrases W001–W005 (verbatim Whisper output) | 235 / 235 pass; typecheck clean |
 | 2026-11-10 | transcript, whisper, form, transfer | core (incl. transcript 5, form 65, transfer 7), server, field logic + whisper | 230 / 230 pass; typecheck clean; `vite build` OK |
 
 Phrase set `sccssar-style-v0.1` was written by engineering in the style of SAR radio/charting speech. It is **not** from real patients or real recordings. Replace or extend with transcripts from Santa Clara County SAR training sessions.
@@ -14,7 +15,9 @@ Phrase set `sccssar-style-v0.1` was written by engineering in the style of SAR r
 
 2026-11-10, Chromium 400×860: setup → new training chart → typed utterance with pulse, BP, SpO2, tourniquet, sound-alike drug ("zofrin"), allergy → 5 clear cards + 1 held for a drug pick → accept → handoff with QR (177/350 chars). No console errors.
 
-2026-11-10, Chromium 390×844 (built preview): setup → new training chart → 4 typed utterances → Form tab fills live (ink vs card waiting), Transcript shows each line with clock time and linked entries, Review lists unmatched drug, waiting cards and every entry → handoff text QR and animated full-chart QR → Paper forms screen. No console errors, no requests off localhost. Service worker: offline reload loads the app. Full-chart QR: 142-event chart received through Chromium's fake camera via jsQR. Form scan: synthetic blank SAR form, 33/33 labels and bindings, no network requests. **Whisper inference not run** (model host blocked in the build environment).
+2026-11-10, Chromium 390×844 (built preview): setup → new training chart → 4 typed utterances → Form tab fills live (ink vs card waiting), Transcript shows each line with clock time and linked entries, Review lists unmatched drug, waiting cards and every entry → handoff text QR and animated full-chart QR → Paper forms screen. No console errors, no requests off localhost. Service worker: offline reload loads the app. Full-chart QR: 142-event chart received through Chromium's fake camera via jsQR. Form scan: synthetic blank SAR form, 33/33 labels and bindings, no network requests. Whisper first run blocked (model host unreachable); see the Whisper entry below.
+
+2026-11-10, **on-device Whisper (whisper-base.en, q8, WASM, 1 thread) in Chromium**, model served from the app's own ./models/. Speech from a neural TTS voice (Piper en_US-lessac-medium), not a person. Load 3.3 s; 1.4–7.3 s clips transcribed in 3.4–5.1 s on the build container's CPU. 10 "say it like this" phrases: rules gave the intended values for 7/10 on raw Whisper text (misses: "RASPS" for resps, "sets" for sats, "Ternicott" for tourniquet; each fell to a note card, nothing wrong was charted). After rules-0.2.0: 10/10 correct values, the 3 misheard forms carry a check so Accept all skips them. Full mic path (fake mic → hold-to-talk → live partials → final pass → transcript line → cards) passes. Fixed on the way: transformers.js 4.3.2 local-model path skips tokenizer/preprocessor (model now served as the app's own "remote" host); release missed after the live text pushed the button (pointer capture). Not yet: a human voice, outdoor noise, a phone CPU (W0-8, W0-9).
 
 ## Week-0 device checks (must pass before any field use)
 

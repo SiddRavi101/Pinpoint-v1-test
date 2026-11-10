@@ -12,7 +12,14 @@ type Phase = "idle" | "listening" | "transcribing";
  */
 export function VoiceButton({ onUtterance }: { onUtterance: (u: Utterance) => void }) {
   const [status, setStatus] = useState<VoiceStatus | null>(null);
-  const [phase, setPhase] = useState<Phase>("idle");
+  const [phase, setPhaseState] = useState<Phase>("idle");
+  // Pointer handlers read the phase from a ref: a quick tap's pointerup fires
+  // before React re-renders, so state would still say "idle".
+  const phaseRef = useRef<Phase>("idle");
+  const setPhase = (p: Phase) => {
+    phaseRef.current = p;
+    setPhaseState(p);
+  };
   const [live, setLive] = useState("");
   const [typed, setTyped] = useState("");
   const [error, setError] = useState("");
@@ -108,15 +115,22 @@ export function VoiceButton({ onUtterance }: { onUtterance: (u: Utterance) => vo
         type="button"
         className={`voice-btn${listening ? " on" : ""}`}
         disabled={phase === "transcribing"}
-        onPointerDown={() => {
+        onPointerDown={(e) => {
+          // Keep the release on this button even when the live text above it
+          // grows and pushes the button down mid-press.
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {
+            /* not supported: the release still usually lands here */
+          }
           pressedAt.current = Date.now();
-          if (phase === "idle") {
+          if (phaseRef.current === "idle") {
             toggleMode.current = false;
             start();
           }
         }}
         onPointerUp={() => {
-          if (phase !== "listening") return;
+          if (phaseRef.current !== "listening") return;
           const held = Date.now() - pressedAt.current;
           if (toggleMode.current) {
             toggleMode.current = false;
@@ -124,6 +138,13 @@ export function VoiceButton({ onUtterance }: { onUtterance: (u: Utterance) => vo
           } else if (held < 350) {
             toggleMode.current = true; // short tap: keep listening until the next tap
           } else {
+            void stop();
+          }
+        }}
+        onPointerCancel={() => {
+          // The OS took the touch (call, notification): treat it as a release.
+          if (phaseRef.current === "listening") {
+            toggleMode.current = false;
             void stop();
           }
         }}

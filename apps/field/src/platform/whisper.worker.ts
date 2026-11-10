@@ -17,10 +17,24 @@ let asr: Asr | null = null;
 let queue: Promise<unknown> = Promise.resolve();
 
 function configure(base: string, source: "bundled" | "remote") {
-  env.allowLocalModels = source === "bundled";
-  env.allowRemoteModels = source === "remote";
-  env.localModelPath = new URL("./models/", base).href;
-  env.useBrowserCache = true;
+  // transformers.js 4.3.2's local-model path skips existence checks for
+  // http(s) model paths (tokenizer and preprocessor then count as missing),
+  // so the app itself is used as the model host instead:
+  // - "bundled": files come from this app's own ./models/ folder. The model
+  //   hub is never contacted. The service worker keeps them for offline use.
+  // - "remote": the one-time download from the model hub into Cache Storage.
+  env.allowLocalModels = false;
+  env.allowRemoteModels = true;
+  env.useFS = false;
+  if (source === "bundled") {
+    env.remoteHost = new URL("./", base).href;
+    env.remotePathTemplate = "models/{model}/";
+    env.useBrowserCache = false;
+  } else {
+    env.remoteHost = "https://huggingface.co/";
+    env.remotePathTemplate = "{model}/resolve/{revision}/";
+    env.useBrowserCache = true;
+  }
   // Load the wasm files directly from ./ort/ (no blob: imports, no CDN).
   env.useWasmCache = false;
   const onnx = env.backends.onnx as { wasm?: { wasmPaths?: unknown; numThreads?: number; proxy?: boolean } };
