@@ -1,0 +1,39 @@
+{
+  "name": "@pinpoint/field",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Field app: React/TS inside a Capacitor native wrapper (needed for each phone's offline speech engine).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "cap:sync": "npm run build && cap sync",
+    "cap:ios": "cap open ios",
+    "cap:android": "cap open android"
+  },
+  "dependencies": {
+    "@pinpoint/core": "0.1.0",
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
+    "@capacitor-community/keep-awake": "8.0.1",
+    "@capacitor-community/privacy-screen": "8.0.0",
+    "@capacitor-community/sqlite": "8.1.1",
+    "@capacitor-community/text-to-speech": "8.0.2",
+    "@capgo/capacitor-native-biometric": "8.9.1",
+    "@capgo/capacitor-speech-recognition": "8.4.4",
+    "qrcode": "1.5.4",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3",
+    "@types/qrcode": "1.5.5",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.3.4",
+    "vite": "5.4.21"
+  }
+}

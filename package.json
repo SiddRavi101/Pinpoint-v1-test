@@ -1,0 +1,27 @@
+{
+  "name": "pinpoint-v1",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pinpoint Core v1: voice-first offline charting for SAR field teams (Track 1, Record).",
+  "workspaces": [
+    "packages/core",
+    "apps/field",
+    "server"
+  ],
+  "scripts": {
+    "test": "TZ=UTC vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p packages/core && tsc -p server && tsc -p apps/field --noEmit",
+    "dev:field": "npm run dev -w apps/field",
+    "build:field": "npm run build -w apps/field",
+    "dev:server": "npm run dev -w server",
+    "phrases": "TZ=UTC vitest run packages/core/test/phrases.test.ts"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

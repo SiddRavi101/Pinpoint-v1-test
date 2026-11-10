@@ -1,0 +1,18 @@
+{
+  "name": "@pinpoint/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sync server: receives confirmed chart events, returns receipts, serves the medical director's review list.",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@pinpoint/core": "0.1.0"
+  },
+  "devDependencies": {
+    "tsx": "4.19.2",
+    "@types/node": "22.10.2"
+  }
+}

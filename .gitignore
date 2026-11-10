@@ -1,0 +1,8 @@
+node_modules/
+dist/
+apps/field/ios/App/App/public/
+apps/field/android/app/src/main/assets/public/
+server/data/
+*.log
+.env
+.DS_Store
