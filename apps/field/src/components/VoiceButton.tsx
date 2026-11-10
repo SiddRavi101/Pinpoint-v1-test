@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import type { Utterance } from "@pinpoint/core";
 import { speech, type VoiceStatus } from "../platform/speech";
 
 /**
  * One big glove-friendly button. Hold to talk, or tap once to start and
  * again to stop. A red bar shows whenever the mic is on.
  */
-export function VoiceButton({ onUtterance }: { onUtterance: (text: string) => void }) {
+export function VoiceButton({ onUtterance }: { onUtterance: (u: Utterance) => void }) {
   const [status, setStatus] = useState<VoiceStatus | null>(null);
   const [listening, setListening] = useState(false);
   const [live, setLive] = useState("");
@@ -28,10 +29,10 @@ export function VoiceButton({ onUtterance }: { onUtterance: (text: string) => vo
     }
   };
   const stop = async () => {
-    const text = await speech.stop();
+    const heard = await speech.stop();
     setListening(false);
     setLive("");
-    if (text.trim()) onUtterance(text);
+    if (heard?.text.trim()) onUtterance(heard);
   };
 
   if (!status) return <div className="voice-wrap"><p className="muted">Checking voice…</p></div>;
@@ -42,7 +43,8 @@ export function VoiceButton({ onUtterance }: { onUtterance: (text: string) => vo
         className="voice-wrap dev"
         onSubmit={(e) => {
           e.preventDefault();
-          if (typed.trim()) onUtterance(typed);
+          const at = new Date().toISOString();
+          if (typed.trim()) onUtterance({ text: typed.trim(), startedAt: at, endedAt: at, engine: "typed" });
           setTyped("");
         }}
       >

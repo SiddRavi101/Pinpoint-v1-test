@@ -2,7 +2,7 @@
  * Append-only event log for one chart. The chart is always computed from
  * these events (see chart.ts); nothing edits an event after it is written.
  */
-import { SCHEMA_VERSION, type ChartEvent, type Entry, type EventSource, type Proposal } from "./types.js";
+import { SCHEMA_VERSION, MIN_SCHEMA_VERSION, type ChartEvent, type Entry, type EventSource, type Proposal, type Utterance } from "./types.js";
 import { defaultEnv, type Env } from "./env.js";
 import { TEMPLATE_VERSION } from "./template.js";
 
@@ -52,11 +52,19 @@ export class ChartLog {
     return this.list.some((e) => e.kind === "chart_closed");
   }
 
+  /**
+   * Record what was heard, for the transcript. This never creates a chart
+   * entry: entries still need a tap on a card (confirmProposal).
+   */
+  recordUtterance(u: Utterance): ChartEvent {
+    return this.append({ kind: "utterance", payload: u, source: "voice", confirmed: false, at: u.startedAt });
+  }
+
   /** Record a confirmed voice card. The only way voice reaches the chart. */
   confirmProposal(p: Proposal): ChartEvent {
     return this.append({
       kind: "entry",
-      payload: { entry: p.entry, quote: p.quote },
+      payload: { entry: p.entry, quote: p.quote, ...(p.utteranceId ? { utteranceId: p.utteranceId } : {}) },
       source: "voice",
       confirmed: true,
       at: p.at,
@@ -126,6 +134,15 @@ export class ChartLog {
       const target = this.list.find((x) => x.id === e.payload.targetId);
       if (!target || target.kind !== "entry") throw new LogError("Can only void an entry");
       if (this.list.some((x) => x.kind === "entry_voided" && x.payload.targetId === e.payload.targetId)) throw new LogError("Entry already voided");
+    }
+    if (e.schemaVersion < MIN_SCHEMA_VERSION || e.schemaVersion > SCHEMA_VERSION) throw new LogError(`Unknown schema version ${e.schemaVersion}`);
+    if (e.kind === "utterance") {
+      if (e.source !== "voice" || e.confirmed) throw new LogError("An utterance is voice and never a confirmed entry");
+      if (e.payload.text.length > 4000) throw new LogError("Utterance too long");
+    }
+    if (e.kind === "entry" && e.payload.utteranceId !== undefined) {
+      const u = this.list.find((x) => x.id === e.payload.utteranceId);
+      if (!u || u.kind !== "utterance") throw new LogError("Entry points to a missing utterance");
     }
     if (e.kind === "sync_confirmed" && e.payload.serverEventCount > this.list.length) {
       throw new LogError("Server confirmed more events than exist");

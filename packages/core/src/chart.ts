@@ -2,14 +2,29 @@
  * Chart projection: the record a medic sees is always computed from the
  * event log. Voided entries drop out; nothing is edited in place.
  */
-import type { ChartEvent, Entry, EventSource, Limb, SurveyLetter } from "./types.js";
+import type { ChartEvent, Entry, EventSource, Limb, SurveyLetter, TranscriptSegment } from "./types.js";
 
 export interface Stamped<T> {
   eventId: string;
   at: string;
   source: EventSource;
   quote?: string;
+  utteranceId?: string;
   value: T;
+}
+
+/** One line of the transcript, with the chart entries confirmed from it. */
+export interface TranscriptLine {
+  eventId: string;
+  startedAt: string;
+  endedAt: string;
+  text: string;
+  engine: string;
+  segments: TranscriptSegment[];
+  /** Active (not voided) entries confirmed from this utterance. */
+  entryIds: string[];
+  /** Entries from this utterance that were later voided. */
+  voidedEntryIds: string[];
 }
 
 export interface VitalRow {
@@ -51,6 +66,8 @@ export interface Chart {
   notes: Stamped<string>[];
   /** Every active entry, oldest first. */
   entries: Stamped<Entry>[];
+  /** Everything heard, oldest first. Not part of the record itself. */
+  transcript: TranscriptLine[];
 }
 
 export function projectChart(events: readonly ChartEvent[]): Chart {
@@ -78,7 +95,28 @@ export function projectChart(events: readonly ChartEvent[]): Chart {
     allergies: { items: [] },
     notes: [],
     entries: [],
+    transcript: [],
   };
+
+  for (const e of events) {
+    if (e.kind !== "utterance") continue;
+    chart.transcript.push({
+      eventId: e.id,
+      startedAt: e.payload.startedAt,
+      endedAt: e.payload.endedAt,
+      text: e.payload.text,
+      engine: e.payload.engine,
+      segments: e.payload.segments ?? [],
+      entryIds: [],
+      voidedEntryIds: [],
+    });
+  }
+  for (const e of events) {
+    if (e.kind !== "entry" || !e.payload.utteranceId) continue;
+    const line = chart.transcript.find((t) => t.eventId === e.payload.utteranceId);
+    if (line) (voided.has(e.id) ? line.voidedEntryIds : line.entryIds).push(e.id);
+  }
+  chart.transcript.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
 
   for (const e of events) {
     if (e.kind === "chart_closed") {
@@ -102,7 +140,7 @@ export function projectChart(events: readonly ChartEvent[]): Chart {
 
   for (const e of sorted) {
     const entry = e.payload.entry;
-    const stamp = <T>(value: T): Stamped<T> => ({ eventId: e.id, at: e.at, source: e.source, ...(e.payload.quote ? { quote: e.payload.quote } : {}), value });
+    const stamp = <T>(value: T): Stamped<T> => ({ eventId: e.id, at: e.at, source: e.source, ...(e.payload.quote ? { quote: e.payload.quote } : {}), ...(e.payload.utteranceId ? { utteranceId: e.payload.utteranceId } : {}), value });
     chart.entries.push(stamp(entry));
     switch (entry.type) {
       case "pulse":

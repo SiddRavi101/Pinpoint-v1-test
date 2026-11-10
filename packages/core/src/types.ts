@@ -3,7 +3,12 @@
  * (field app, server, review page). See docs/quality/change-control.md.
  */
 
-export const SCHEMA_VERSION = 1;
+/**
+ * 2: adds the "utterance" event (transcript) and entry.payload.utteranceId.
+ * Version 1 events stay valid; nothing about them changed.
+ */
+export const SCHEMA_VERSION = 2;
+export const MIN_SCHEMA_VERSION = 1;
 
 /** Where an event came from. "guidance" is reserved for Track 2 and unused in Track 1. */
 export type EventSource = "tap" | "voice" | "guidance" | "system";
@@ -66,7 +71,8 @@ interface BaseEvent {
 
 export type ChartEvent =
   | (BaseEvent & { kind: "chart_opened"; payload: { training: boolean } })
-  | (BaseEvent & { kind: "entry"; payload: { entry: Entry; quote?: string } })
+  | (BaseEvent & { kind: "entry"; payload: { entry: Entry; quote?: string; utteranceId?: string } })
+  | (BaseEvent & { kind: "utterance"; payload: Utterance })
   | (BaseEvent & {
       kind: "entry_voided";
       payload: { targetId: string; reason: "corrected" | "entered_in_error" };
@@ -78,6 +84,27 @@ export type ChartEvent =
     });
 
 export type EventKind = ChartEvent["kind"];
+
+/** Part of an utterance with times in seconds from the start of speech. */
+export interface TranscriptSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+
+/**
+ * What the speech engine heard for one push-to-talk. Text only: audio is
+ * never stored. Not a chart entry; it is the transcript the entries came from.
+ */
+export interface Utterance {
+  text: string;
+  /** When the mic opened and closed. ISO 8601. */
+  startedAt: string;
+  endedAt: string;
+  /** Which engine produced the text, e.g. "whisper-base.en", "phone-on-device", "typed". */
+  engine: string;
+  segments?: TranscriptSegment[];
+}
 
 /** A voice-derived card waiting for a tap. Never part of the chart until confirmed. */
 export interface Proposal {
@@ -92,4 +119,6 @@ export interface Proposal {
   /** For unclear drug matches: the closest names on the list. */
   candidates?: string[];
   ruleVersion: string;
+  /** The utterance event this card came from, once recorded. */
+  utteranceId?: string;
 }

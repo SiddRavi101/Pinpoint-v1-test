@@ -78,7 +78,19 @@ export function ChartScreen(props: {
 
       {!closed && (
         <>
-          <VoiceButton onUtterance={(text) => setCards((cs) => [...cs, ...extract(text, new Date()).proposals])} />
+          <VoiceButton
+            onUtterance={async (u) => {
+              // The transcript line is saved first; cards point back to it.
+              let utteranceId = "";
+              await commit((l) => {
+                const ev = l.recordUtterance(u);
+                utteranceId = ev.id;
+                return ev;
+              });
+              const found = extract(u.text, new Date(u.startedAt)).proposals.map((p) => ({ ...p, utteranceId }));
+              setCards((cs) => [...cs, ...found]);
+            }}
+          />
           <Cards
             cards={cards}
             onAccept={accept}

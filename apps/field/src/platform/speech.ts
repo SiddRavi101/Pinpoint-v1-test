@@ -12,7 +12,7 @@
  */
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { SpeechRecognition } from "@capgo/capacitor-speech-recognition";
-import { DRUGS } from "@pinpoint/core";
+import { DRUGS, type Utterance } from "@pinpoint/core";
 
 export type VoiceStatus =
   | { kind: "ready" }
@@ -21,10 +21,12 @@ export type VoiceStatus =
 
 export interface SpeechEngine {
   status(): Promise<VoiceStatus>;
+  /** Short name stamped on every utterance, e.g. "phone-on-device". */
+  readonly id: string;
   /** Start listening; `onPartial` gets live text. */
   start(onPartial: (text: string) => void): Promise<void>;
-  /** Stop and return the final text. */
-  stop(): Promise<string>;
+  /** Stop and return what was heard (text and times only), or null if nothing. */
+  stop(): Promise<Utterance | null>;
 }
 
 const LANGUAGE = "en-US";
@@ -36,7 +38,9 @@ const CONTEXT = [
 ];
 
 class NativeSpeech implements SpeechEngine {
+  readonly id = "phone-on-device";
   private last = "";
+  private startedAt = new Date();
   private handle?: PluginListenerHandle;
 
   async status(): Promise<VoiceStatus> {
@@ -53,6 +57,7 @@ class NativeSpeech implements SpeechEngine {
 
   async start(onPartial: (text: string) => void): Promise<void> {
     this.last = "";
+    this.startedAt = new Date();
     await this.handle?.remove();
     this.handle = await SpeechRecognition.addListener("partialResults", (ev) => {
       const text = ev.accumulatedText ?? ev.matches?.[0] ?? "";
@@ -71,7 +76,7 @@ class NativeSpeech implements SpeechEngine {
     });
   }
 
-  async stop(): Promise<string> {
+  async stop(): Promise<Utterance | null> {
     try {
       await SpeechRecognition.stop();
       const last = await SpeechRecognition.getLastPartialResult().catch(() => null);
@@ -81,17 +86,19 @@ class NativeSpeech implements SpeechEngine {
       await this.handle?.remove();
       this.handle = undefined;
     }
-    return this.last;
+    const text = this.last.trim();
+    return text ? { text, startedAt: this.startedAt.toISOString(), endedAt: new Date().toISOString(), engine: this.id } : null;
   }
 }
 
 class DevSpeech implements SpeechEngine {
+  readonly id = "typed";
   async status(): Promise<VoiceStatus> {
     return { kind: "dev", reason: "Browser preview: type what you would say. Real voice runs only in the native app." };
   }
   async start(): Promise<void> {}
-  async stop(): Promise<string> {
-    return "";
+  async stop(): Promise<Utterance | null> {
+    return null;
   }
 }
 
